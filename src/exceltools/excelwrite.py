@@ -6,6 +6,17 @@ from collections import defaultdict, OrderedDict
 from xlsxwriter.workbook import Workbook
 import datetime
 
+def round_num(v, n=3):
+    value = v
+    if isinstance(v, float):
+        value = round(v, n)
+    try:
+        if float(v) == int(v):
+            value = int(v)
+    except:
+        pass
+    return value
+
 class excelwrite(object):
 
     def __init__(self, fields = None, firstrow=None, sheetordered=False):
@@ -29,18 +40,11 @@ class excelwrite(object):
             self.__data__[(wb, sheet)] = []
         self.__data__[(wb, sheet)].append(data)
 
-    def write_df(self, df, workbook, worksheet):
-        fields = df.columns.tolist()
-        for record in df.values:
-            msg = record.tolist()
-            for k, v in enumerate(msg):
-                try:
-                    if float(v) == int(v):
-                        v = int(v)
-                    msg[k] = v
-                except:
-                    pass
-            self(workbook, worksheet, msg, fields)
+    def write_df(self, df, workbook, worksheet, precision=3):
+        fields = df.columns.tolist()            
+        for k, record in df.iterrows():
+            msg = [round_num(v, precision) for v in record]
+            self(workbook, worksheet, msg, fields)         
         return self        
     
     def set_column_width(self, wb, sheet):
