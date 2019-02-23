@@ -95,43 +95,46 @@ class ExcelWriter:
         for (col, width) in enumerate(width):
             col_name = xlsxwriter.utility.xl_col_to_name(col)
             col_name_range = '%s:%s' % (col_name, col_name)
-            sh.set_column(col_name_range, min(width, 45))
+            sh.set_column(col_name_range, min(width+1, 45))
 
     def writefields(self, wb, sheet, fields=None, firstrow=None):
-        workbooks = self.__book__
-        sheets = self.__sheet__
-        ws = sheets[wb][sheet]
-        bold = self.__fmt__[wb]['Bold']
+        self.setworksheet(wb, sheet)
+        ws = self.worksheet
+        fmt = self.fmt
         fields = fields or self.__fields__[(wb, sheet)]
         firstrow = firstrow or self.__firstrow__[(wb, sheet)]
         for col, value in enumerate(fields):
-            ws.write(firstrow, col, value, bold)       
-        ws.freeze_panes(1, 1)        
+            ws.write(firstrow, col, value, fmt["Bold"])       
+        ws.freeze_panes(1, 1)
+
+    def write(self, row, col, value):
+        ws = self.worksheet
+        fmt = self.fmt
+        if isinstance(value, (int, )):
+            if value < 1E15:
+                ws.write(row, col, value, fmt["int"])
+            else:
+                ws.write(row, col, str(value), fmt["data"])                        
+        elif isinstance(value, float):
+            ws.write(row, col, str(value), fmt["float"])
+        elif isinstance(value, datetime.datetime):
+            ws.write(row, col, value, fmt["time"]) 
+        elif isinstance(value, datetime.date):
+            ws.write(row, col, value, fmt["date"])                  
+        else:
+            ws.write(row, col, value, fmt["data"])        
 
     def writedata(self, wb, sheet):
         ws = self.__sheet__[wb][sheet]
         start_row = self.__firstrow__[(wb, sheet)] + 1
         data = self.__data__[(wb, sheet)]
-        fmt = self.__fmt__[wb]               
+        self.setworksheet(wb, sheet)
         for rownum, data in enumerate(data, start_row):
             for colnum, value in enumerate(data):
-                if isinstance(value, (int, )):
-                    if value < 1E15:
-                        ws.write(rownum, colnum, value, fmt["int"])
-                    else:
-                        ws.write(rownum, colnum, str(value), fmt["data"])                        
-                elif isinstance(value, float):
-                    ws.write(rownum, colnum, str(value), fmt["float"])
-                elif isinstance(value, datetime.datetime):
-                    ws.write(rownum, colnum, value, fmt["time"]) 
-                elif isinstance(value, datetime.date):
-                    ws.write(rownum, colnum, value, fmt["date"])                  
-                else:
-                    ws.write(rownum, colnum, value, fmt["data"])
+                self.write(rownum, colnum, value)               
 
     def write_df(self, df, workbook, worksheet, precision=3):
         fields = df.columns.tolist()
-        self.setworkbook(workbook)
         self.setworksheet(workbook, worksheet)
         self.setfields(fields)
         for k, record in df.iterrows():
